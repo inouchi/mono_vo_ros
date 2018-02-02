@@ -1,0 +1,11 @@
+<launch>
+
+  <!-- Run image_transport_publisher -->
+  <node name="image_transport_publisher" pkg="image_dataset_transport" type="image_transport_publisher" output="screen">
+  </node>
+
+  <!-- Run mono_vo_ros -->
+  <node name="mono_vo_node" pkg="mono_vo_ros" type="mono_vo_ros" output="screen">
+  </node>
+
+</launch>
