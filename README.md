@@ -11,7 +11,9 @@ https://github.com/avisingh599/mono-vo
 ![Demo_Video](https://bytebucket.org/MasatakaInouchi/mono_vo_ros/raw/1abf3db4d7b9d474ebe7fa41372001661ede4802/mono_vo_ros_demo.gif?token=3bd2ba5496d74bb1896501c9288ef9b96c740758)
 
 ## Performance
-![Performance](https://bytebucket.org/MasatakaInouchi/mono_vo_ros/raw/8d4b23ddcb1922af0f0ff37138f5faf24d4160d1/mono_vo_ros_performance.png?token=94d3b43f4d91ab3194373d17174aa98f65e1d6a2)
+<div align="center">
+<img src="https://bytebucket.org/MasatakaInouchi/mono_vo_ros/raw/8d4b23ddcb1922af0f0ff37138f5faf24d4160d1/mono_vo_ros_performance.png?token=94d3b43f4d91ab3194373d17174aa98f65e1d6a2" width=50%>
+</div>
 
 ## Before you run
 In order to run this algorithm, you need to have either your own data, 
