@@ -60,13 +60,11 @@ double VisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
 
   if (file.is_open())
   {
-
     while ((getline(file, line)) && (i <= frameId))
     {
       z_prev = z;
       x_prev = x;
       y_prev = y;
-
       std::istringstream in(line);
 
       for (int j = 0; j < 12; ++j)
@@ -107,7 +105,6 @@ void VisualOdometer::featureTracking(cv::Mat prevImage, cv::Mat currImage, std::
 
     if ((status.at(i) == 0) || (pt.x < 0) || (pt.y < 0))
     {
-
       if((pt.x < 0) || (pt.y < 0))
       {
 	status.at(i) = 0;
@@ -191,12 +188,7 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
       tf_ = tf_ + scale * (Rf_ * t);
       Rf_ = R * Rf_;
     }
-    else
-    {
 
-    }
-    //tf_ = tf_ + scale * (Rf_ * t);
-    //Rf_ = R * Rf_;
   }
 
   // Set result of visual odometry
@@ -220,8 +212,6 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
   // A redetection is triggered in case the number of feautres being trakced go below a particular threshold
   if (prevFeatures_.size() < visualOdometer::MIN_NUM_FEAT)
   {
-    //std::cout << "Number of tracked features reduced to " << prevFeatures.size() << std::endl;
-    //std::cout << "Trigerring redection" << std::endl;
     featureDetection(prevImage_, prevFeatures_);
     featureTracking(prevImage_, currImage_, prevFeatures_, currFeatures_, status);
   }
