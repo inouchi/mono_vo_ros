@@ -70,7 +70,7 @@ double VisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
       for (int j = 0; j < 12; ++j)
       {
         in >> z ;
-        if (j == 7) y = z;
+        if (j == 7)  y = z;
         if (j == 3)  x = z;
       }
       
@@ -194,8 +194,8 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
   // Set result of visual odometry
   geometry_msgs::Pose tmp;
   tmp.position.x = tf_.at<double>(0);
-  tmp.position.y = tf_.at<double>(2);
-  tmp.position.z = 0.0;//tf_.at<double>(1);
+  tmp.position.y = 0.0;//tf_.at<double>(1);
+  tmp.position.z = tf_.at<double>(2);
   if (results_.poses.empty())
   {
     results_.poses.push_back(tmp);
