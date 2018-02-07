@@ -119,13 +119,40 @@ void VisualOdometer::featureTracking(cv::Mat prevImage, cv::Mat currImage, std::
 }
 
 
-void VisualOdometer::featureDetection(cv::Mat image, std::vector<cv::Point2f>& features)
+void VisualOdometer::featureDetection(cv::Mat image, std::vector<cv::Point2f>& features, vo::FeatureDetectionMethod method)
 {
+  // Generate a feature detection
+  cv::Ptr<cv::FeatureDetector> detector;
+
+  switch (method)
+  {
+    case vo::FeatureDetectionMethod::FAST:
+      detector = cv::FastFeatureDetector::create();
+      break;
+    
+    case vo::FeatureDetectionMethod::SIFT:
+      detector = cv::xfeatures2d::SIFT::create();
+      break;
+
+    case vo::FeatureDetectionMethod::SURF:
+      detector = cv::xfeatures2d::SURF::create();
+      break;
+
+    case vo::FeatureDetectionMethod::ORB:
+      detector = cv::ORB::create();
+      break;
+
+    case vo::FeatureDetectionMethod::AKAZE:
+      detector = cv::AKAZE::create();
+      break;
+
+    default:
+      break;
+  }
+
   std::vector<cv::KeyPoint> keypoints;
-  int fastThreshold = 20;
-  bool nonmaxSuppression = true;
-  FAST(image, keypoints, fastThreshold, nonmaxSuppression);
-  cv::KeyPoint::convert(keypoints, features, std::vector<int>());
+  detector->detect(image, keypoints);
+  cv::KeyPoint::convert(keypoints, features);
 }
 
 

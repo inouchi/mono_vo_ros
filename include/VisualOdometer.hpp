@@ -40,6 +40,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/video/tracking.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
 #include <opencv2/calib3d/calib3d.hpp>
 
 // C++
@@ -56,6 +57,14 @@
 
 namespace vo
 {
+  enum FeatureDetectionMethod
+  {
+    FAST,
+    SIFT,
+    SURF,
+    ORB,
+    AKAZE
+  };
 
   // Set parameters
   const int MIN_NUM_FEAT = 2000;
@@ -75,7 +84,7 @@ class VisualOdometer
     VisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* localNodeHandlePtr);
     ~VisualOdometer();
 
-    // TODO: We will try to find some algorithms that can campute scales without ground truth
+    // TODO: Finds some algorithms that can campute scales without ground truth
     // Computes scales with ground truth of KITTI dataset
     double getAbsoluteScale(std::string filePath, int frameId);
 
@@ -84,8 +93,9 @@ class VisualOdometer
     void featureTracking(cv::Mat prevImage, cv::Mat currImage, std::vector<cv::Point2f>& prevFeatures, 
 	                 std::vector<cv::Point2f>& currFeatures, std::vector<unsigned char>& status);
 
-    // Uses FAST as of now, modify parameters as necessary
-    void featureDetection(cv::Mat image, std::vector<cv::Point2f>& features);
+    // Detects a feature from a image using a selected feature detection method 
+    void featureDetection(cv::Mat image, std::vector<cv::Point2f>& features, 
+	                  vo::FeatureDetectionMethod method = vo::FeatureDetectionMethod::FAST);
 
     void imageCb(const sensor_msgs::ImageConstPtr& imageMsg);
 
