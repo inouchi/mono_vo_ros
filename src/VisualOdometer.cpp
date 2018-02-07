@@ -34,7 +34,7 @@ VisualOdometer::VisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* 
   localNodeHandlePtr_ = localNodeHandlePtr;
 
   // Initialize Sibscriber and Publishers
-  imageSub_ = it_.subscribe("camera/image_raw", 1000, &VisualOdometer::imageCb, this);
+  imageSub_ = it_.subscribe("camera/image_raw", 10000, &VisualOdometer::imageCb, this);
   //visualOdometryPub_ = nodeHandlePtr_->advertise<nav_msgs::Odometry>("mono_vo_ros/visual_odometry", 1);
   visualOdometryPub_ = nodeHandlePtr_->advertise<geometry_msgs::PoseArray>("mono_vo_ros/visual_odometry", 1);
 
@@ -55,23 +55,23 @@ double VisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
   std::string line;
   int i = 0;
   std::ifstream file(filePath);
-  double x = 0, y = 0, z = 0;
-  double x_prev, y_prev, z_prev;
+  double currX = 0, currY = 0, currZ = 0;
+  double prevX, prevY, prevZ;
 
   if (file.is_open())
   {
     while ((getline(file, line)) && (i <= frameId))
     {
-      z_prev = z;
-      x_prev = x;
-      y_prev = y;
+      prevZ = currZ;
+      prevX = currX;
+      prevY = currY;
       std::istringstream in(line);
 
       for (int j = 0; j < 12; ++j)
       {
-        in >> z ;
-        if (j == 7)  y = z;
-        if (j == 3)  x = z;
+        in >> currZ ;
+        if (j == 7)  currY = currZ;
+        if (j == 3)  currX = currZ;
       }
       
       i++;
@@ -85,7 +85,7 @@ double VisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
     return 0;
   }
 
-  return sqrt((x - x_prev)*(x - x_prev) + (y - y_prev)*(y - y_prev) + (z - z_prev)*(z - z_prev));
+  return sqrt(pow((currX - prevX), 2) + pow((currY - prevY), 2) + pow((currZ - prevZ), 2));
 }
 
 
@@ -148,47 +148,62 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
   cv::Mat grayScaleImage;
   cv::cvtColor(inputImagePtr->image, grayScaleImage, cv::COLOR_BGR2GRAY);
 
-  // Ready for calculating visual odometry
-  if (isReady_ == false)
-  {
-    prevImage_ = grayScaleImage.clone();
-    isReady_ = true;
-    
-    return;
-  }
-
   // Set a current Image
   currImage_ = grayScaleImage.clone();
 
-  // Feature detection, tracking
-  featureDetection(prevImage_, prevFeatures_);  // Detect features in prevImage_
+  // Ready for calculating visual odometry
+  if (isReady_ == false)
+  {
+    if (numReceiveTopic_ == 1)
+    {
+      prevImage_ = currImage_.clone();
+      std::ofstream(vo::RESULT_FILE);
+    
+      return;
+    }
+    else if (numReceiveTopic_ == 2)
+    {
+      // Feature detection, tracking
+      featureDetection(prevImage_, prevFeatures_);  // Detect features in prevImage_
+      std::vector<unsigned char> status;
+      featureTracking(prevImage_, currImage_, prevFeatures_, currFeatures_, status);  // Track those features to currImage_
+   
+      // TODO: Add a fucntion to load these values directly from KITTI's calib files
+      // WARNING: Different sequences in the KITTI VO dataset have different intrinsic/extyyrinsic parameters
+      // Recovering the pose and the essential matrix
+      cv::Mat E, R, t, mask;
+      E = cv::findEssentialMat(currFeatures_, prevFeatures_, vo::FOCAL, vo::PP, cv::RANSAC, 0.999, 1.0, mask);
+      cv::recoverPose(E, currFeatures_, prevFeatures_, R, t, vo::FOCAL, vo::PP, mask);
+
+      Rf_ = R.clone();
+      tf_ = t.clone();
+
+      prevImage_ = currImage_.clone();
+      prevFeatures_ = currFeatures_;
+
+      isReady_ = true;
+
+      return;
+    }
+
+  }
+
+  // Feature tracking
   std::vector<unsigned char> status;
   featureTracking(prevImage_, currImage_, prevFeatures_, currFeatures_, status);  // Track those features to currImage_
 
-  // TODO: Add a fucntion to load these values directly from KITTI's calib files
-  // WARNING: Different sequences in the KITTI VO dataset have different intrinsic/extrinsic parameters
   // Recovering the pose and the essential matrix
   cv::Mat E, R, t, mask;
-  E = cv::findEssentialMat(currFeatures_, prevFeatures_, visualOdometer::FOCAL, visualOdometer::PP, cv::RANSAC, 0.999, 1.0, mask);
-  cv::recoverPose(E, currFeatures_, prevFeatures_, R, t, visualOdometer::FOCAL, visualOdometer::PP, mask);
-
+  E = cv::findEssentialMat(currFeatures_, prevFeatures_, vo::FOCAL, vo::PP, cv::RANSAC, 0.999, 1.0, mask);
+  cv::recoverPose(E, currFeatures_, prevFeatures_, R, t, vo::FOCAL, vo::PP, mask);
 
   // Compute scale from ground truth of KITII dataset
-  double scale = getAbsoluteScale(visualOdometer::FILE_PATH, numReceiveTopic_);
+  double scale = getAbsoluteScale(vo::KITTI_FILE, numReceiveTopic_ - 1);
 
-  if (Rf_.empty() && tf_.empty())
+  if ((scale > 0.1) && (t.at<double>(2) > t.at<double>(0)) && (t.at<double>(2) > t.at<double>(1)))
   {
-    Rf_ = R.clone();
-    tf_ = t.clone();
-  }
-  else
-  {
-    if ((scale > 0.1) && (t.at<double>(2) > t.at<double>(0)) && (t.at<double>(2) > t.at<double>(1)))
-    {
-      tf_ = tf_ + scale * (Rf_ * t);
-      Rf_ = R * Rf_;
-    }
-
+    tf_ = tf_ + scale * (Rf_ * t);
+    Rf_ = R * Rf_;
   }
 
   // Set result of visual odometry
@@ -209,8 +224,14 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
   // Publish visual odometry
   visualOdometryPub_.publish(results_);
 
+  // Save visual odometry on csv file
+  std::ofstream resultFile;
+  resultFile.open(vo::RESULT_FILE, std::ios::app);
+  resultFile << tf_.at<double>(0) << "," << tf_.at<double>(1) << "," << tf_.at<double>(2) << std::endl;
+  resultFile.close();
+
   // A redetection is triggered in case the number of feautres being trakced go below a particular threshold
-  if (prevFeatures_.size() < visualOdometer::MIN_NUM_FEAT)
+  if (prevFeatures_.size() < vo::MIN_NUM_FEAT)
   {
     featureDetection(prevImage_, prevFeatures_);
     featureTracking(prevImage_, currImage_, prevFeatures_, currFeatures_, status);

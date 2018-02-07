@@ -54,16 +54,18 @@
 #include <string>
 
 
-namespace visualOdometer
+namespace vo
 {
 
   // Set parameters
-  static const int MIN_NUM_FEAT = 2000;
-  static const double FOCAL = 718.8560;  // Focal length of the camera
-  static const cv::Point2d PP(607.1928, 185.2157);  // Principle point of the camera
-  static const std::string FILE_PATH = ros::package::getPath("mono_vo_ros") + "/00.txt";  // Uses to compute scales with ground truth of KITTI dataset 
+  const int MIN_NUM_FEAT = 2000;
+  const double FOCAL = 718.8560;  // Focal length of the camera
+  const cv::Point2d PP(607.1928, 185.2157);  // Principle point of the camera
+  const std::string FILE_PATH   = ros::package::getPath("mono_vo_ros"); 
+  const std::string KITTI_FILE  = FILE_PATH + "/00.txt";  // Uses to compute scales with ground truth of KITTI dataset 
+  const std::string RESULT_FILE = FILE_PATH + "/result.csv"; 
 
-} // namespace VisualOdometer
+} // namespace vo
 
 
 class VisualOdometer
