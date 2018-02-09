@@ -1,10 +1,6 @@
-// ROS
 #include <ros/ros.h>
-
-// C++
 #include <iostream>
-
-#include "VisualOdometer.hpp"
+#include "MonocularVisualOdometer.hpp"
 
 
 int main(int argc, char** argv)
@@ -16,7 +12,7 @@ int main(int argc, char** argv)
   ros::NodeHandle localNodeHandle("~");
 
   // Create a VisualOdometer instance
-  VisualOdometer visualOdometer(&nodeHandle, &localNodeHandle);
+  mvo::MonocularVisualOdometer monocularVisualOdometer(&nodeHandle, &localNodeHandle);
   
   while (ros::ok())
   {

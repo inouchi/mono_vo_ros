@@ -24,9 +24,9 @@
 
 */
 
-#include "VisualOdometer.hpp"
+#include "MonocularVisualOdometer.hpp"
 
-VisualOdometer::VisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* localNodeHandlePtr)
+mvo::MonocularVisualOdometer::MonocularVisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* localNodeHandlePtr)
   : it_(*nodeHandlePtr)
 {
   // Set node handle ptrs
@@ -34,7 +34,7 @@ VisualOdometer::VisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* 
   localNodeHandlePtr_ = localNodeHandlePtr;
 
   // Initialize Sibscriber and Publishers
-  imageSub_ = it_.subscribe("camera/image_raw", 10000, &VisualOdometer::imageCb, this);
+  imageSub_ = it_.subscribe("camera/image_raw", 10000, &MonocularVisualOdometer::imageCb, this);
   //visualOdometryPub_ = nodeHandlePtr_->advertise<nav_msgs::Odometry>("mono_vo_ros/visual_odometry", 1);
   visualOdometryPub_ = nodeHandlePtr_->advertise<geometry_msgs::PoseArray>("mono_vo_ros/visual_odometry", 1);
 
@@ -44,13 +44,13 @@ VisualOdometer::VisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* 
 }
 
 
-VisualOdometer::~VisualOdometer()
+mvo::MonocularVisualOdometer::~MonocularVisualOdometer()
 {
 
 }
 
 
-double VisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
+double mvo::MonocularVisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
 {
   std::string line;
   int i = 0;
@@ -89,15 +89,15 @@ double VisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
 }
 
 
-void VisualOdometer::getQuaternionMsg(double roll, double pitch, double yaw, geometry_msgs::Quaternion &quaternionMsg)
+void mvo::MonocularVisualOdometer::getQuaternionMsg(double roll, double pitch, double yaw, geometry_msgs::Quaternion &quaternionMsg)
 {
   tf::Quaternion quaternion =tf::createQuaternionFromRPY(roll, pitch, yaw);
   tf::quaternionTFToMsg(quaternion, quaternionMsg);
 }
 
 
-void VisualOdometer::featureTracking(cv::Mat prevImage, cv::Mat currImage, std::vector<cv::Point2f>& prevFeatures,
-                                     std::vector<cv::Point2f>& currFeatures, std::vector<unsigned char>& status)
+void mvo::MonocularVisualOdometer::featureTracking(cv::Mat prevImage, cv::Mat currImage, std::vector<cv::Point2f>& prevFeatures,
+                                              std::vector<cv::Point2f>& currFeatures, std::vector<unsigned char>& status)
 { 
   std::vector<float> err;					
   cv::Size winSize = cv::Size(21, 21);																								
@@ -126,30 +126,30 @@ void VisualOdometer::featureTracking(cv::Mat prevImage, cv::Mat currImage, std::
 }
 
 
-void VisualOdometer::featureDetection(cv::Mat image, std::vector<cv::Point2f>& features, vo::FeatureDetectionMethod method)
+void mvo::MonocularVisualOdometer::featureDetection(cv::Mat image, std::vector<cv::Point2f>& features, FeatureDetectionMethod method)
 {
   // Generate a feature detection
   cv::Ptr<cv::FeatureDetector> detector;
 
   switch (method)
   {
-    case vo::FeatureDetectionMethod::FAST:
+    case FeatureDetectionMethod::FAST:
       detector = cv::FastFeatureDetector::create();
       break;
     
-    case vo::FeatureDetectionMethod::SIFT:
+    case FeatureDetectionMethod::SIFT:
       detector = cv::xfeatures2d::SIFT::create();
       break;
 
-    case vo::FeatureDetectionMethod::SURF:
+    case FeatureDetectionMethod::SURF:
       detector = cv::xfeatures2d::SURF::create();
       break;
 
-    case vo::FeatureDetectionMethod::ORB:
+    case FeatureDetectionMethod::ORB:
       detector = cv::ORB::create();
       break;
 
-    case vo::FeatureDetectionMethod::AKAZE:
+    case FeatureDetectionMethod::AKAZE:
       detector = cv::AKAZE::create();
       break;
 
@@ -163,7 +163,7 @@ void VisualOdometer::featureDetection(cv::Mat image, std::vector<cv::Point2f>& f
 }
 
 
-void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
+void mvo::MonocularVisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
 {
   cv_bridge::CvImagePtr inputImagePtr;
   numReceiveTopic_++;
@@ -191,7 +191,7 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
     if (numReceiveTopic_ == 1)
     {
       prevImage_ = currImage_.clone();
-      std::ofstream(vo::RESULT_FILE);
+      std::ofstream(RESULT_FILE);
     
       return;
     }
@@ -206,8 +206,8 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
       // WARNING: Different sequences in the KITTI VO dataset have different intrinsic/extyyrinsic parameters
       // Recovering the pose and the essential matrix
       cv::Mat E, R, t, mask;
-      E = cv::findEssentialMat(currFeatures_, prevFeatures_, vo::FOCAL, vo::PP, cv::RANSAC, 0.999, 1.0, mask);
-      cv::recoverPose(E, currFeatures_, prevFeatures_, R, t, vo::FOCAL, vo::PP, mask);
+      E = cv::findEssentialMat(currFeatures_, prevFeatures_, FOCAL, PP, cv::RANSAC, 0.999, 1.0, mask);
+      cv::recoverPose(E, currFeatures_, prevFeatures_, R, t, FOCAL, PP, mask);
 
       Rf_ = R.clone();
       tf_ = t.clone();
@@ -228,11 +228,11 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
 
   // Recovering the pose and the essential matrix
   cv::Mat E, R, t, mask;
-  E = cv::findEssentialMat(currFeatures_, prevFeatures_, vo::FOCAL, vo::PP, cv::RANSAC, 0.999, 1.0, mask);
-  cv::recoverPose(E, currFeatures_, prevFeatures_, R, t, vo::FOCAL, vo::PP, mask);
+  E = cv::findEssentialMat(currFeatures_, prevFeatures_, FOCAL, PP, cv::RANSAC, 0.999, 1.0, mask);
+  cv::recoverPose(E, currFeatures_, prevFeatures_, R, t, FOCAL, PP, mask);
 
   // Compute scale from ground truth of KITII dataset
-  double scale = getAbsoluteScale(vo::KITTI_FILE, numReceiveTopic_ - 1);
+  double scale = getAbsoluteScale(KITTI_FILE, numReceiveTopic_ - 1);
 
   if ((scale > 0.1) && (t.at<double>(2) > t.at<double>(0)) && (t.at<double>(2) > t.at<double>(1)))
   {
@@ -250,7 +250,7 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
   cv::Mat direction;
   geometry_msgs::Quaternion q;
   calib::euler(Rf_, direction);
-  getQuaternionMsg(vo::OFFSET_ROLL, direction.at<double>(1, 0) + vo::OFFSET_PITCH, vo::OFFSET_YAW, q);
+  getQuaternionMsg(OFFSET_ROLL, direction.at<double>(1, 0) + OFFSET_PITCH, OFFSET_YAW, q);
   tmp.orientation = q;
 
   if (results_.poses.empty())
@@ -268,12 +268,12 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
 
   // Save visual odometry on csv file
   std::ofstream resultFile;
-  resultFile.open(vo::RESULT_FILE, std::ios::app);
+  resultFile.open(RESULT_FILE, std::ios::app);
   resultFile << tf_.at<double>(0) << "," << tf_.at<double>(1) << "," << tf_.at<double>(2) << std::endl;
   resultFile.close();
 
   // A redetection is triggered in case the number of feautres being trakced go below a particular threshold
-  if (prevFeatures_.size() < vo::MIN_NUM_FEAT)
+  if (prevFeatures_.size() < MIN_NUM_FEAT)
   {
     featureDetection(prevImage_, prevFeatures_);
     featureTracking(prevImage_, currImage_, prevFeatures_, currFeatures_, status);

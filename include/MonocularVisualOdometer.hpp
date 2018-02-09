@@ -57,7 +57,7 @@
 
 #include "RotationConverter.hpp"
 
-namespace vo
+namespace mvo
 {
   enum FeatureDetectionMethod
   {
@@ -79,47 +79,47 @@ namespace vo
   const std::string KITTI_FILE  = FILE_PATH + "/00.txt";  // Uses to compute scales with ground truth of KITTI dataset 
   const std::string RESULT_FILE = FILE_PATH + "/result.csv"; 
 
-} // namespace vo
+
+  class MonocularVisualOdometer
+  {
+
+    public:
+      MonocularVisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* localNodeHandlePtr);
+      ~MonocularVisualOdometer();
+
+      // TODO: Finds some algorithms that can campute scales without ground truth
+      // Computes scales with ground truth of KITTI dataset
+      double getAbsoluteScale(std::string filePath, int frameId);
+
+      void getQuaternionMsg(double roll, double pitch, double yaw, geometry_msgs::Quaternion& quaternionMsg);
+
+      // Uses KLT algorithm assume that a point in the nearby space
+      // This function automatically gets rid of points for which tracking fails
+      void featureTracking(cv::Mat prevImage, cv::Mat currImage, std::vector<cv::Point2f>& prevFeatures, 
+	  std::vector<cv::Point2f>& currFeatures, std::vector<unsigned char>& status);
+
+      // Detects a feature from a image using a selected feature detection method 
+      void featureDetection(cv::Mat image, std::vector<cv::Point2f>& features, 
+	                    FeatureDetectionMethod method = FeatureDetectionMethod::FAST);
+
+      void imageCb(const sensor_msgs::ImageConstPtr& imageMsg);
 
 
-class VisualOdometer
-{
+    private:
+      ros::NodeHandle* nodeHandlePtr_;
+      ros::NodeHandle* localNodeHandlePtr_;
 
-  public:
-    VisualOdometer(ros::NodeHandle* nodeHandlePtr, ros::NodeHandle* localNodeHandlePtr);
-    ~VisualOdometer();
+      image_transport::ImageTransport it_;
+      image_transport::Subscriber imageSub_;
+      geometry_msgs::PoseArray results_;
+      ros::Publisher visualOdometryPub_;
 
-    // TODO: Finds some algorithms that can campute scales without ground truth
-    // Computes scales with ground truth of KITTI dataset
-    double getAbsoluteScale(std::string filePath, int frameId);
+      cv::Mat prevImage_, currImage_;
+      std::vector<cv::Point2f> prevFeatures_, currFeatures_;  // Vectors to store the coordinates of the feature points
+      bool isReady_;    // Whether it is ready for calclating visual odometry
+      cv::Mat Rf_, tf_; // The final rotation and tranlation vectors containing
+      size_t numReceiveTopic_;
 
-    void getQuaternionMsg(double roll, double pitch, double yaw, geometry_msgs::Quaternion& quaternionMsg);
+  };
 
-    // Uses KLT algorithm assume that a point in the nearby space
-    // This function automatically gets rid of points for which tracking fails
-    void featureTracking(cv::Mat prevImage, cv::Mat currImage, std::vector<cv::Point2f>& prevFeatures, 
-	                 std::vector<cv::Point2f>& currFeatures, std::vector<unsigned char>& status);
-
-    // Detects a feature from a image using a selected feature detection method 
-    void featureDetection(cv::Mat image, std::vector<cv::Point2f>& features, 
-	                  vo::FeatureDetectionMethod method = vo::FeatureDetectionMethod::FAST);
-
-    void imageCb(const sensor_msgs::ImageConstPtr& imageMsg);
-
-
-  private:
-    ros::NodeHandle* nodeHandlePtr_;
-    ros::NodeHandle* localNodeHandlePtr_;
-
-    image_transport::ImageTransport it_;
-    image_transport::Subscriber imageSub_;
-    geometry_msgs::PoseArray results_;
-    ros::Publisher visualOdometryPub_;
-
-    cv::Mat prevImage_, currImage_;
-    std::vector<cv::Point2f> prevFeatures_, currFeatures_;  // Vectors to store the coordinates of the feature points
-    bool isReady_;    // Whether it is ready for calclating visual odometry
-    cv::Mat Rf_, tf_; // The final rotation and tranlation vectors containing
-    size_t numReceiveTopic_;
-    
-};
+}  // namespace mvo
