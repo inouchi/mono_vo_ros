@@ -50,10 +50,12 @@
 #include <iterator>
 #include <vector>
 #include <ctime>
+#include <cmath>
 #include <sstream>
 #include <fstream>
 #include <string>
 
+#include "RotationConverter.hpp"
 
 namespace vo
 {
@@ -70,6 +72,9 @@ namespace vo
   const int MIN_NUM_FEAT = 2000;
   const double FOCAL = 718.8560;  // Focal length of the camera
   const cv::Point2d PP(607.1928, 185.2157);  // Principle point of the camera
+  const double OFFSET_ROLL   = -1.0 * M_PI / 2.0;
+  const double OFFSET_PITCH  = -1.0 * M_PI / 2.0;
+  const double OFFSET_YAW    = 0.0;
   const std::string FILE_PATH   = ros::package::getPath("mono_vo_ros"); 
   const std::string KITTI_FILE  = FILE_PATH + "/00.txt";  // Uses to compute scales with ground truth of KITTI dataset 
   const std::string RESULT_FILE = FILE_PATH + "/result.csv"; 
@@ -87,6 +92,8 @@ class VisualOdometer
     // TODO: Finds some algorithms that can campute scales without ground truth
     // Computes scales with ground truth of KITTI dataset
     double getAbsoluteScale(std::string filePath, int frameId);
+
+    void getQuaternionMsg(double roll, double pitch, double yaw, geometry_msgs::Quaternion& quaternionMsg);
 
     // Uses KLT algorithm assume that a point in the nearby space
     // This function automatically gets rid of points for which tracking fails

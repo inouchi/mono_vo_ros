@@ -89,6 +89,13 @@ double VisualOdometer::getAbsoluteScale(std::string filePath, int frameId)
 }
 
 
+void VisualOdometer::getQuaternionMsg(double roll, double pitch, double yaw, geometry_msgs::Quaternion &quaternionMsg)
+{
+  tf::Quaternion quaternion =tf::createQuaternionFromRPY(roll, pitch, yaw);
+  tf::quaternionTFToMsg(quaternion, quaternionMsg);
+}
+
+
 void VisualOdometer::featureTracking(cv::Mat prevImage, cv::Mat currImage, std::vector<cv::Point2f>& prevFeatures,
                                      std::vector<cv::Point2f>& currFeatures, std::vector<unsigned char>& status)
 { 
@@ -233,11 +240,19 @@ void VisualOdometer::imageCb(const sensor_msgs::ImageConstPtr& imageMsg)
     Rf_ = R * Rf_;
   }
 
-  // Set result of visual odometry
+  // Set results of a estimated tranlation vector
   geometry_msgs::Pose tmp;
   tmp.position.x = tf_.at<double>(0);
   tmp.position.y = 0.0;//tf_.at<double>(1);
   tmp.position.z = tf_.at<double>(2);
+
+  // Set result of a estimated rotation vector
+  cv::Mat direction;
+  geometry_msgs::Quaternion q;
+  calib::euler(Rf_, direction);
+  getQuaternionMsg(vo::OFFSET_ROLL, direction.at<double>(1, 0) + vo::OFFSET_PITCH, vo::OFFSET_YAW, q);
+  tmp.orientation = q;
+
   if (results_.poses.empty())
   {
     results_.poses.push_back(tmp);

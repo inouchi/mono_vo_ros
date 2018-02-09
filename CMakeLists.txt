@@ -52,6 +52,7 @@ add_executable(
   mono_vo_ros
   src/mono_vo_ros_main.cpp
   src/VisualOdometer.cpp
+  src/RotationConverter.cpp
 )
 
 target_link_libraries(
